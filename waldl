@@ -1,0 +1,97 @@
+#!/bin/sh
+
+# script to find and download wallpapers from wallhaven
+
+walldir="$HOME/.local/share/wallhaven"
+cachedir="$HOME/.cache/wallhaven"
+mkdir -p "$walldir"
+rm -rf "$cachedir"
+mkdir -p "$cachedir"
+
+sxiv_otps=" -tfpo -z 200" # o is needed
+max_pages=4
+# sorting : date_added, relevance, random, views, favorites, toplist
+sorting=relevance
+# quality : large original small
+quality=large
+# atleast : least res
+atleast=1920x1080
+
+sh_menu () {
+	printf "" | dmenu -p "search wallhaven:"
+}
+
+sh_info () {
+	notify-send "wallhaven" "$*"
+}
+
+
+query=$*
+if [ -z "$query" ]; then
+	query=$( sh_menu )
+	[ -z "$query" ] && exit 1
+fi
+
+get_ids () {
+	for page_no in $(seq $max_pages)
+	do
+		{
+			curl -s -G "https://wallhaven.cc/api/v1/search" \
+				-d "q=$1" \
+				-d "page=$page_no" \
+				-d "sorting=$sorting" |
+					jq '.data[]?'
+		} &
+	done
+}
+
+# search wallpapers
+sh_info "getting data..."
+data=$(get_ids "$query")
+
+[ -z "$data" ] && { sh_info "no images found"; exit 1; }
+
+thumbnails=$(printf "%s" "$data" | jq -r '.thumbs.'"$quality"'')
+
+if [ -z "$thumbnails" ]; then
+	notify-send "wallhaven" "no-results found"
+	exit 1
+fi
+
+# download the thumbnails
+sh_info "downloading thumbnails..."
+for url in $thumbnails
+do
+	{
+		curl -s "$url" -o "$cachedir/$(printf "%s" "$url" | rev | cut -d'/' -f1  | rev )" 
+		printf "."
+	} &
+	sleep 0.001
+done
+wait
+printf "\n"
+sh_info "downloaded thumbnails..."
+
+image_ids=$(sxiv $sxiv_otps "$cachedir" | rev | cut -c5-10 | rev )
+
+
+rm -r "$cachedir"
+#sh_info "deleted thumbnails..."
+
+[ -z "$image_ids" ] && exit
+
+# download the selected wall papers
+cd "$walldir"
+sh_info "downloading wallpapers..."
+for ids in $image_ids
+do
+	{
+		curl -s -O "$(printf "%s" "$data" |\
+			jq -r 'select( .id == "'$ids'" )|.path')"
+		printf "downloading: %s\n" "$ids" >&2
+	} &
+	sleep 0.001
+done
+wait
+printf "\n"
+sh_info "downloaded wallpapers..."
