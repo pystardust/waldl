@@ -26,6 +26,16 @@ sh_info () {
 	notify-send "wallhaven" "$*"
 }
 
+dep_ck () {
+	for pr; do
+		if ! command -v $pr >/dev/null 2>&1; then
+			sh_info "command $pr not found, install: $pr"
+			exit 1
+		fi
+	done
+}
+dep_ck "sxiv"
+
 
 query=$*
 if [ -z "$query" ]; then
