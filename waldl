@@ -162,6 +162,6 @@ do
 	url=$( jq -r '.data[]?|select( .id == "'$ids'" )|.path' < "$datafile" )
 	printf "url = %s\n" "$url"
 	printf -- "-O\n"
-done | curl -Z -K -
+done | curl -K -
 
 sh_info "downloaded wallpapers..."
