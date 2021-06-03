@@ -165,4 +165,4 @@ do
 done | curl -K -
 
 sh_info "wallpapers downloaded in:- '$walldir'"
-sxiv "$walldir"/* &
+cd $walldir && sxiv $(ls -c) &
