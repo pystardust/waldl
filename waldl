@@ -69,7 +69,7 @@ dep_ck () {
 		fi
 	done
 }
-dep_ck "sxiv" "curl"
+dep_ck "sxiv" "curl" "jq"
 
 
 # clean up command that would be called when the program exits
