@@ -1,14 +1,28 @@
 #!/bin/sh
 
+# https://github.com/pystardust/waldl
 # script to find and download wallpapers from wallhaven
+version="0.0.1"
 
+# Usage:
+# 	waldl <query>
+# if query left empty then sh_menu will be used (dmenu by default) 
+# after the thumbnails are cached, sxiv would open up with the thumbnails
+# Select the wallpapers using `m` on the image. ( marking the image in sxiv )
+# press `q` to quit sxiv, the marked images would start downloading
+
+####################
+## User variables ##
+####################
+
+# the dir where wallpapers are stored
 walldir="$HOME/.local/share/wallhaven"
+# the dir used to cache thumbnails
 cachedir="$HOME/.cache/wallhaven"
-mkdir -p "$walldir"
-rm -rf "$cachedir"
-mkdir -p "$cachedir"
-
-sxiv_otps=" -tfpo -z 200" # o is needed
+# sxiv options
+sxiv_otps=" -tfpo -z 200" # o is needed for selection
+# number of pages to show in search results
+# each page contains 24 results
 max_pages=4
 # sorting : date_added, relevance, random, views, favorites, toplist
 sorting=relevance
@@ -17,15 +31,36 @@ quality=large
 # atleast : least res
 atleast=1920x1080
 
+# the menu command used when no query is provided
 sh_menu () {
 	printf "" | dmenu -p "search wallhaven:"
 }
 
+##########################
+## getting search query ##
+##########################
+
+query=$*
+if [ -z "$query" ]; then
+	query=$( sh_menu )
+	[ -z "$query" ] && exit 1
+fi
+
+######################
+## start up commands #
+######################
+
+mkdir -p "$walldir"
+rm -rf "$cachedir"
+mkdir -p "$cachedir"
+
+# progress display command
 sh_info () {
 	printf "%s\n" "$*" >&2
 	notify-send "wallhaven" "$*"
 }
 
+# dependency checking
 dep_ck () {
 	for pr; do
 		if ! command -v $pr >/dev/null 2>&1; then
@@ -34,34 +69,36 @@ dep_ck () {
 		fi
 	done
 }
-dep_ck "sxiv"
+dep_ck "sxiv" "curl"
 
 
-query=$*
-if [ -z "$query" ]; then
-	query=$( sh_menu )
-	[ -z "$query" ] && exit 1
-fi
-
-datafile=$(mktemp --tmpdir wald.XXXX)
-
-# clean up if killed
-trap "exit" INT TERM
-trap "clean_up" EXIT
-
+# clean up command that would be called when the program exits
 clean_up () {
 	printf "%s\n" "cleaning up..." >&2
 	rm "$datafile"
 	rm -r "$cachedir"
 }
 
-get_ids () {
+# data file to store the api information
+datafile=$(mktemp --tmpdir wald.XXXX)
+
+# clean up if killed
+trap "exit" INT TERM
+trap "clean_up" EXIT
+
+##################
+## getting data ##
+##################
+
+# request the search results for each page
+get_results () {
 	for page_no in $(seq $max_pages)
 	do
 		{
 				curl -s -G "https://wallhaven.cc/api/v1/search" \
 					-d "q=$1" \
 					-d "page=$page_no" \
+					-d "atleast=$atleast" \
 					-d "sorting=$sorting" >> "$datafile"
 		} &
 		sleep 0.001
@@ -71,13 +108,19 @@ get_ids () {
 
 # search wallpapers
 sh_info "getting data..."
-get_ids "$query"
+get_results "$query"
 
+# check if data file is empty, if so then exit
 {
 	read t < "$datafile"
 	[ -z "$t" ] && { sh_info "no images found"; exit 1; }
 }
 
+############################
+## downloading thumbnails ##
+############################
+
+# get a list of thumnails from the data
 thumbnails=$( jq -r '.data[]?|.thumbs.'"$quality" < "$datafile")
 
 if [ -z "$thumbnails" ]; then
@@ -94,9 +137,18 @@ do
 done | curl -Z -K -
 #sh_info "downloaded thumbnails..."
 
+###########################
+## user selection (sxiv) ##
+###########################
+
+# extract the id's out of the thumbnail name
 image_ids=$(sxiv $sxiv_otps "$cachedir" | rev | cut -c5-10 | rev )
 
 [ -z "$image_ids" ] && exit
+
+#########################
+## download wallpapers ##
+#########################
 
 # download the selected wall papers
 cd "$walldir"
