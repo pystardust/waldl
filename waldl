@@ -95,11 +95,13 @@ get_results () {
 	for page_no in $(seq $max_pages)
 	do
 		{
-				curl -s -G "https://wallhaven.cc/api/v1/search" \
+			json=$(curl -s -G "https://wallhaven.cc/api/v1/search" \
 					-d "q=$1" \
 					-d "page=$page_no" \
 					-d "atleast=$atleast" \
-					-d "sorting=$sorting" >> "$datafile"
+					-d "sorting=$sorting" 
+				)
+			printf "%s\n" "$json" >> "$datafile"
 		} &
 		sleep 0.001
 	done
