@@ -22,6 +22,7 @@ sh_menu () {
 }
 
 sh_info () {
+	printf "%s\n" "$*" >&2
 	notify-send "wallhaven" "$*"
 }
 
@@ -32,26 +33,42 @@ if [ -z "$query" ]; then
 	[ -z "$query" ] && exit 1
 fi
 
+datafile=$(mktemp --tmpdir wald.XXXX)
+
+# clean up if killed
+trap "exit" INT TERM
+trap "clean_up" EXIT
+
+clean_up () {
+	printf "%s\n" "cleaning up..." >&2
+	rm "$datafile"
+	rm -r "$cachedir"
+}
+
 get_ids () {
 	for page_no in $(seq $max_pages)
 	do
 		{
-			curl -s -G "https://wallhaven.cc/api/v1/search" \
-				-d "q=$1" \
-				-d "page=$page_no" \
-				-d "sorting=$sorting" |
-					jq '.data[]?'
+				curl -s -G "https://wallhaven.cc/api/v1/search" \
+					-d "q=$1" \
+					-d "page=$page_no" \
+					-d "sorting=$sorting" >> "$datafile"
 		} &
+		sleep 0.001
 	done
+	wait
 }
 
 # search wallpapers
 sh_info "getting data..."
-data=$(get_ids "$query")
+get_ids "$query"
 
-[ -z "$data" ] && { sh_info "no images found"; exit 1; }
+{
+	read t < "$datafile"
+	[ -z "$t" ] && { sh_info "no images found"; exit 1; }
+}
 
-thumbnails=$(printf "%s" "$data" | jq -r '.thumbs.'"$quality"'')
+thumbnails=$( jq -r '.data[]?|.thumbs.'"$quality" < "$datafile")
 
 if [ -z "$thumbnails" ]; then
 	notify-send "wallhaven" "no-results found"
@@ -59,24 +76,15 @@ if [ -z "$thumbnails" ]; then
 fi
 
 # download the thumbnails
-sh_info "downloading thumbnails..."
+sh_info "caching thumbnails..."
 for url in $thumbnails
 do
-	{
-		curl -s "$url" -o "$cachedir/$(printf "%s" "$url" | rev | cut -d'/' -f1  | rev )" 
-		printf "."
-	} &
-	sleep 0.001
-done
-wait
-printf "\n"
-sh_info "downloaded thumbnails..."
+		printf "url = %s\n" "$url"
+		printf "output = %s\n" "$cachedir/${url##*/}"
+done | curl -Z -K -
+#sh_info "downloaded thumbnails..."
 
 image_ids=$(sxiv $sxiv_otps "$cachedir" | rev | cut -c5-10 | rev )
-
-
-rm -r "$cachedir"
-#sh_info "deleted thumbnails..."
 
 [ -z "$image_ids" ] && exit
 
@@ -85,13 +93,9 @@ cd "$walldir"
 sh_info "downloading wallpapers..."
 for ids in $image_ids
 do
-	{
-		curl -s -O "$(printf "%s" "$data" |\
-			jq -r 'select( .id == "'$ids'" )|.path')"
-		printf "downloading: %s\n" "$ids" >&2
-	} &
-	sleep 0.001
-done
-wait
-printf "\n"
+	url=$( jq -r '.data[]?|select( .id == "'$ids'" )|.path' < "$datafile" )
+	printf "url = %s\n" "$url"
+	printf -- "-O\n"
+done | curl -Z -K -
+
 sh_info "downloaded wallpapers..."
