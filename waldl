@@ -6,7 +6,7 @@ version="0.0.1"
 
 # Usage:
 # 	waldl <query>
-# if query left empty then sh_menu will be used (dmenu by default) 
+# if query left empty then sh_menu will be used (dmenu by default)
 # after the thumbnails are cached, sxiv would open up with the thumbnails
 # Select the wallpapers using `m` on the image. ( marking the image in sxiv )
 # press `q` to quit sxiv, the marked images would start downloading
@@ -101,7 +101,7 @@ get_results () {
 					-d "q=$1" \
 					-d "page=$page_no" \
 					-d "atleast=$atleast" \
-					-d "sorting=$sorting" 
+					-d "sorting=$sorting"
 				)
 			printf "%s\n" "$json" >> "$datafile"
 		} &
@@ -164,4 +164,5 @@ do
 	printf -- "-O\n"
 done | curl -K -
 
-sh_info "downloaded wallpapers..."
+sh_info "wallpapers downloaded in:- '$walldir'"
+sxiv "$walldir"/* &
