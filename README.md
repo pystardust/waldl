@@ -2,6 +2,9 @@
 
 Browser [wallhaven](https://wallhaven.cc/) using `sxiv`
 
+### [script showcasing video](https://youtu.be/C7n-34bEdF8)
+
+
 ## Usage
 ```
 waldl <query>
@@ -25,3 +28,5 @@ script.
 * jq
 * curl
 * dmenu ( *optional* )
+
+
