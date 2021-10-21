@@ -47,6 +47,7 @@ if [ -z "$query" ]; then
 	query=$( sh_menu )
 	[ -z "$query" ] && exit 1
 fi
+query=$(printf '%s' "$query" | tr ' ' '+' )
 
 ######################
 ## start up commands #
