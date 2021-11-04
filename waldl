@@ -33,7 +33,7 @@ atleast=1920x1080
 
 # the menu command used when no query is provided
 sh_menu () {
-	printf "" | dmenu -p "search wallhaven:"
+	: | dmenu -p "search wallhaven:"
 	# ROFI: comment the previous line and uncomment the next line for rofi
 	# rofi -dmenu -l 0 -p "search wallpapers"
 }
@@ -42,34 +42,28 @@ sh_menu () {
 ## getting search query ##
 ##########################
 
-query=$*
-if [ -z "$query" ]; then
-	query=$( sh_menu )
-	[ -z "$query" ] && exit 1
-fi
+[ -n "$*" ] && query="$*" || query=$( sh_menu )
+[ -z "$query" ] && exit 1
 query=$(printf '%s' "$query" | tr ' ' '+' )
 
 ######################
 ## start up commands #
 ######################
 
-mkdir -p "$walldir"
 rm -rf "$cachedir"
-mkdir -p "$cachedir"
+mkdir -p "$walldir" "$cachedir"
 
 # progress display command
 sh_info () {
-	printf "%s\n" "$*" >&2
-	notify-send "wallhaven" "$*"
+	printf "%s\n" "$1" >&2
+	notify-send "wallhaven" "$1"
+	[ -n "$2" ] && exit "$2"
 }
 
 # dependency checking
 dep_ck () {
 	for pr; do
-		if ! command -v $pr >/dev/null 2>&1; then
-			sh_info "command $pr not found, install: $pr"
-			exit 1
-		fi
+		command -v $pr >/dev/null 2>&1 || sh_info "command $pr not found, install: $pr" 1
 	done
 }
 dep_ck "sxiv" "curl" "jq"
@@ -78,12 +72,11 @@ dep_ck "sxiv" "curl" "jq"
 # clean up command that would be called when the program exits
 clean_up () {
 	printf "%s\n" "cleaning up..." >&2
-	rm "$datafile"
-	rm -r "$cachedir"
+	rm -rf "$datafile" "$cachedir"
 }
 
 # data file to store the api information
-datafile=$(mktemp --tmpdir wald.XXXX)
+datafile="/tmp/wald.$$"
 
 # clean up if killed
 trap "exit" INT TERM
@@ -116,10 +109,7 @@ sh_info "getting data..."
 get_results "$query"
 
 # check if data file is empty, if so then exit
-{
-	read t < "$datafile"
-	[ -z "$t" ] && { sh_info "no images found"; exit 1; }
-}
+[ -s "$datafile" ] || sh_info "no images found" 1 
 
 ############################
 ## downloading thumbnails ##
@@ -128,10 +118,7 @@ get_results "$query"
 # get a list of thumnails from the data
 thumbnails=$( jq -r '.data[]?|.thumbs.'"$quality" < "$datafile")
 
-if [ -z "$thumbnails" ]; then
-	notify-send "wallhaven" "no-results found"
-	exit 1
-fi
+[ -z "$thumbnails" ] && sh_info "no-results found" 1
 
 # download the thumbnails
 sh_info "caching thumbnails..."
@@ -147,8 +134,7 @@ done | curl -Z -K -
 ###########################
 
 # extract the id's out of the thumbnail name
-image_ids=$(sxiv $sxiv_otps "$cachedir" | rev | cut -c5-10 | rev )
-
+image_ids="$(sxiv $sxiv_otps "$cachedir")"
 [ -z "$image_ids" ] && exit
 
 #########################
@@ -160,6 +146,8 @@ cd "$walldir"
 sh_info "downloading wallpapers..."
 for ids in $image_ids
 do
+	ids="${ids##*/}"
+	ids="${ids%.*}"
 	url=$( jq -r '.data[]?|select( .id == "'$ids'" )|.path' < "$datafile" )
 	printf "url = %s\n" "$url"
 	printf -- "-O\n"
