@@ -1,13 +1,13 @@
-PREFIX := /usr/local
+INSTALL_PATH := /usr/local/bin
 
 install:
 	# Make Script accessable from everywhere
-	cp "$(CURDIR)/waldl" "$(PREFIX)/bin"
+	cp "$(CURDIR)/waldl" "$(INSTALL_PATH)/waldl"
 	# Make sure script is executable
-	chmod +x "$(PREFIX)/bin/waldl" 
+	chmod +x "$(INSTALL_PATH)/waldl" 
 
 uninstall:
 	# Get rid of program
-	rm "$(PREFIX)/bin/waldl" 
+	rm "$(INSTALL_PATH)/waldl" 
 
 .PHONY: install uninstall
