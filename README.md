@@ -21,14 +21,16 @@ Selected images would be downloaded. The default download directory is
 Defaults can be changed by changing the user variables, in the start of the
 script.
 
-## Install/Uninstall
+## Installation
+Default installation path is `/usr/local/bin`, to change it edit the `INSTALL_PATH` variable in the Makefile.
 
-Install `waldl`
+To install `waldl` just run:
 ```
 make install
 ```
 
-Uninstall `waldl`
+
+To later uninstall `waldl` run:
 ```
 make uninstall
 ```
