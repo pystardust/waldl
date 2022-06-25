@@ -21,6 +21,17 @@ Selected images would be downloaded. The default download directory is
 Defaults can be changed by changing the user variables, in the start of the
 script.
 
+## Install/Uninstall
+
+Install `waldl`
+```
+make install
+```
+
+Uninstall `waldl`
+```
+make uninstall
+```
 
 ## Dependencies
 
