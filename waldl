@@ -15,6 +15,7 @@ version="0.0.1"
 ## User variables ##
 ####################
 
+[ -z $VIEWER ] && VIEWER=sxiv
 # the dir where wallpapers are stored
 walldir="$HOME/.local/share/wallhaven"
 # the dir used to cache thumbnails
@@ -69,7 +70,7 @@ dep_ck () {
 		command -v $pr >/dev/null 2>&1 || sh_info "command $pr not found, install: $pr" 1
 	done
 }
-dep_ck "sxiv" "curl" "jq"
+dep_ck "$VIEWER" "curl" "jq"
 
 
 # clean up command that would be called when the program exits
@@ -137,7 +138,7 @@ done | curl -Z -K -
 ###########################
 
 # extract the id's out of the thumbnail name
-image_ids="$(sxiv $sxiv_otps "$cachedir")"
+image_ids="$($VIEWER $sxiv_otps "$cachedir")"
 [ -z "$image_ids" ] && exit
 
 #########################
@@ -157,4 +158,4 @@ do
 done | curl -K -
 
 sh_info "wallpapers downloaded in:- '$walldir'"
-sxiv $(ls -c)
+$VIEWER $(ls -c)
