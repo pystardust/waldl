@@ -32,15 +32,16 @@ quality=large
 # atleast : least res
 atleast=1920x1080
 
-# allow the user to customize the defaults
-[ -e "$HOME/.config/waldlrc" ] && . "$HOME/.config/waldlrc"
-
 # the menu command used when no query is provided
 sh_menu () {
 	: | dmenu -p "search wallhaven:"
 	# ROFI: comment the previous line and uncomment the next line for rofi
 	# rofi -dmenu -l 0 -p "search wallpapers"
 }
+
+# allow the user to customize the defaults
+[ -e "$HOME/.config/waldlrc" ] && . "$HOME/.config/waldlrc"
+
 
 ##########################
 ## getting search query ##
