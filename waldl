@@ -31,6 +31,8 @@ sorting=relevance
 quality=large
 # atleast : least res
 atleast=1920x1080
+# add your apikey
+apikey=""
 
 # allow the user to customize the defaults
 [ -e "$HOME/.config/waldlrc" ] && . "$HOME/.config/waldlrc"
@@ -90,12 +92,16 @@ trap "clean_up" EXIT
 ## getting data ##
 ##################
 
+full_link="https://wallhaven.cc/api/v1/search"
+if [ "$apikey" != "" ]; then
+	full_link="$full_link""?apikey=""$apikey"
+fi
 # request the search results for each page
 get_results () {
 	for page_no in $(seq $max_pages)
 	do
 		{
-			json=$(curl -s -G "https://wallhaven.cc/api/v1/search" \
+			json=$(curl -s -G "$full_link" \
 					-d "q=$1" \
 					-d "page=$page_no" \
 					-d "atleast=$atleast" \
